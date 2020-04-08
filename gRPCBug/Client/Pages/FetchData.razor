@@ -1,0 +1,102 @@
+﻿@page "/fetchdata"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject IAccessTokenProvider AuthenticationService
+@inject NavigationManager Navigation
+@using gRPCBug.Shared
+
+@using Grpc.Net.Client.Web;
+@using Grpc.Net.Client;
+@using Grpc.Core;
+
+@inject GrpcChannel Channel
+@using Google.Protobuf.WellKnownTypes
+@inject IAccessTokenProvider AuthenticationService
+@*@attribute [Authorize]*@
+
+<h1>Weather forecast</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (forecasts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var forecast in forecasts)
+            {
+                <tr>
+                    <td>@forecast.TemperatureC</td>
+                    <td>@forecast.Summary</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IList<WeatherForecast>? forecasts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        //var client = new WeatherForecasts.WeatherForecastsClient(Channel);
+        var client = await getClient();
+        forecasts = (await client.GetWeatherForecastsAsync(new Empty())).Forecasts;
+    }
+
+    private async Task<WeatherForecasts.WeatherForecastsClient> getClient()
+    {
+        var httpClient = new HttpClient(new GrpcWebHandler(GrpcWebMode.GrpcWebText, new HttpClientHandler()));
+
+        var baseUri = "https://localhost:5001";
+
+        var tokenResult = await AuthenticationService.RequestAccessToken();
+
+        if (tokenResult.TryGetToken(out var token))
+        {
+            httpClient.DefaultRequestHeaders.Add("Authorization",
+                $"Bearer {token.Value}");
+        }
+
+        var _token = token.Value;
+
+        var credentials = CallCredentials.FromInterceptor((context, metadata) =>
+        {
+            if (!string.IsNullOrEmpty(_token))
+            {
+                metadata.Add("Authorization", $"Bearer {_token}");
+            }
+            return Task.CompletedTask;
+        });
+
+        //SslCredentials is used here because this channel is using TLS.
+        //Channels that aren't using TLS should use ChannelCredentials.Insecure instead.
+        var channel = GrpcChannel.ForAddress(baseUri, new GrpcChannelOptions
+        {
+            Credentials = ChannelCredentials.Create(new SslCredentials(), credentials)
+        });
+
+        //var channel = GrpcChannel.ForAddress(baseUri, new GrpcChannelOptions { HttpClient = httpClient, Credentials = ChannelCredentials.Create(new SslCredentials(), credentials) });
+
+        var chanel = GrpcChannel.ForAddress(baseUri, new GrpcChannelOptions { HttpClient = httpClient });
+
+
+        // Now we can instantiate gRPC clients for this channel
+        var client = new  WeatherForecasts.WeatherForecastsClient(chanel);
+
+
+        return client;
+    }
+
+}
