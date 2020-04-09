@@ -26,6 +26,7 @@ namespace GrpcService1
                 {
                     options.Authority = "https://localhost:44330/";
                     options.RequireHttpsMetadata = false;
+                    options.Audience = "GrpcService1";
 
                 });
 
@@ -53,16 +54,16 @@ namespace GrpcService1
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
             }
 
             app.UseRouting();
+            app.UseCors();
 
             app.UseAuthentication();
             app.UseAuthorization();
-
+      
             app.UseGrpcWeb();
-            app.UseCors();
-
 
             app.UseEndpoints(endpoints =>
             {

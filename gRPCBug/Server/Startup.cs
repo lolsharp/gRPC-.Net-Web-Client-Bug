@@ -54,6 +54,7 @@ namespace gRPCBug.Server
                 app.UseDeveloperExceptionPage();
                 app.UseDatabaseErrorPage();
                 app.UseWebAssemblyDebugging();
+                Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
             }
             else
             {

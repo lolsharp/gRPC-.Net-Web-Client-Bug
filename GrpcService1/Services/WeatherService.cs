@@ -21,10 +21,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Microsoft.AspNetCore.Authorization;
 using Weather;
 
 namespace Server.Services
 {
+    [Authorize]
     public class WeatherService : WeatherForecasts.WeatherForecastsBase
     {
         private static readonly string[] Summaries = new[]
